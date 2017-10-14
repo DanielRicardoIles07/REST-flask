@@ -1,0 +1,26 @@
+<{% extends 'base/base.html' %}
+
+{% block body %}
+	<div class="login">
+		<div style="font-size: 25px">
+			<img src="{{ url_for('static', filename='images/addUser.png') }}" width="100" height="100">Create a new account
+		</div>
+		<h1>Sign Up</h1>
+		<div class="login-bottom">
+			{% from "includes/_formhelpers.html" import render_field %}
+			<form method="POST" action="">
+				{{render_field(form.name, class_="")}}
+				<br>&ensp;
+				{{render_field(form.email, class_="")}}
+				<br>&ensp;
+				{{render_field(form.username, class_="")}}
+				<br>&ensp;
+				{{render_field(form.password, class_="")}}
+				<input type="submit" value="Sign Up">
+			</form>
+			<p>You have acount? <a href="/" style="color: #127DA7">Sign In</p></a>
+		</div>
+	</div>
+{% endblock %}
+</body>
+</html>
