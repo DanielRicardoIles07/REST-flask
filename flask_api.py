@@ -11,14 +11,24 @@ db = pymysql.connect("domiciliosurbanos.com", "joseluis", "597b9050653f3", "mu_d
 
 app = Flask(__name__)
 
+#database
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = ''
+app.config['MYSQL_DB'] = 'restflask'
+app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
+
+#init database
+mysql = MySQL(app)
+
 @app.route('/')
 def Login():
 	return render_template('login.html')
 
 class RegisterForm(Form):
     name = StringField('Name', [validators.Length(min=1, max=50)])
-    email  = StringField('Email', [validators.Length(min=4, max=20)])
-    username = StringField('Username', [validators.Length(min=6, max=50)])
+    email  = StringField('Email', [validators.Length(min=4, max=50)])
+    username = StringField('Username', [validators.Length(min=2, max=50)])
     password = PasswordField('Password', [
         validators.DataRequired(),
         validators.EqualTo('confirm', message='Passwords do not match')
@@ -29,9 +39,30 @@ class RegisterForm(Form):
 def signup():
     form = RegisterForm(request.form)
     if request.method == 'POST' and form.validate():
-    	return render_template('signup.html')
+    	name = form.name.data
+    	email = form.email.data
+    	username = form.username.data
+    	password = sha256_crypt.encrypt(str(form.password.data))
+
+    	#create cursor
+    	cur = mysql.connection.cursor()
+
+    	cur.execute("INSERT INTO users(name, email, username, password) VALUES (%s, %s, %s, %s)", (name, email, username, password))
+
+    	#insertar en db
+    	mysql.connection.commit()
+
+    	#close conncection
+    	cur.close()
+
+    	flash('Register successfuly', 'success')
+
+    	return redirect(url_for('index'))
     return render_template('signup.html', form=form)
 
+@app.route('/index')
+def index():
+	return render_template('index.html')
 
 @app.route('/api/puntos/domicilios/v.1.0')
 def puntos():
@@ -42,4 +73,5 @@ def puntos():
     return jsonify(results=results)
 
 if __name__ == '__main__':
+	app.secret_key='secret123'
 	app.run(debug=True)
