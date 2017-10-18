@@ -16,9 +16,9 @@
 	</div>
 	<h1>Sign In</h1>
 	<div class="login-bottom">
-		<form>
-			<input type="text" placeholder="Username" required=" ">					
-			<input type="password" class="password" placeholder="Password" required=" ">						
+		<form action="" method="POST">
+			<input type="text" placeholder="Username" required=" " name="username" value={{request.form.username}}>					
+			<input type="password" class="password" placeholder="Password" required=" " name="password" value={{request.form.password}}>
 			<input type="submit" value="login">
 		</form>
 	<p>You haven't acount? <a href="/signup" style="color: #127DA7">Click Here</p></a>

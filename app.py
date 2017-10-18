@@ -6,24 +6,17 @@ from flask import jsonify
 from flask import g
 from flask import abort
 import pymysql
-
+from functools import wraps
 db = pymysql.connect("domiciliosurbanos.com", "joseluis", "597b9050653f3", "mu_domicilios")
-
 app = Flask(__name__)
-
 #database
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = ''
 app.config['MYSQL_DB'] = 'restflask'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
-
 #init database
 mysql = MySQL(app)
-
-@app.route('/')
-def Login():
-	return render_template('login.html')
 
 class RegisterForm(Form):
     name = StringField('Name', [validators.Length(min=1, max=50)])
@@ -34,6 +27,29 @@ class RegisterForm(Form):
         validators.EqualTo('confirm', message='Passwords do not match')
     ])
     confirm = PasswordField('Confirm Password')
+@app.route('/', methods=['GET', 'POST'])
+def Login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password_candidate = request.form['password']
+        cur = mysql.connection.cursor()
+        result = cur.execute("SELECT * from users WHERE username = %s", [username])
+        if result > 0:
+            data = cur.fetchone()
+            password = data['password']
+            if sha256_crypt.verify(password_candidate, password):
+                session['logged_in'] = True
+                session['username'] = username
+                flash('You are now logged in', 'success')
+                return redirect(url_for('index'))
+            else:
+                error = 'Invalid Login'
+                return render_template('login.html', error = error)
+            cur.close()
+        else:
+            error = 'Username not found'
+            return render_template('login.html', error = error)
+    return render_template('login.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -43,26 +59,36 @@ def signup():
     	email = form.email.data
     	username = form.username.data
     	password = sha256_crypt.encrypt(str(form.password.data))
-
     	#create cursor
     	cur = mysql.connection.cursor()
-
     	cur.execute("INSERT INTO users(name, email, username, password) VALUES (%s, %s, %s, %s)", (name, email, username, password))
-
     	#insertar en db
     	mysql.connection.commit()
-
     	#close conncection
     	cur.close()
-
-    	flash('Register successfuly', 'success')
-
     	return redirect(url_for('index'))
     return render_template('signup.html', form=form)
 
+def is_logged_in(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if 'logged_in' in session:
+            return f(*args, **kwargs)
+        else:
+            flash('Unauthorized, please login', 'danger')
+            return redirect(url_for('Login'))
+    return wrap
+
 @app.route('/index')
+@is_logged_in
 def index():
-	return render_template('index.html')
+   return render_template('index.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You are now logged out', 'success')
+    return redirect(url_for('Login'))
 
 @app.route('/api/puntos/domicilios/v.1.0')
 def puntos():
@@ -74,4 +100,4 @@ def puntos():
 
 if __name__ == '__main__':
 	app.secret_key='secret123'
-	app.run(debug=True)
+	app.run(debug=True, port= 8000)
